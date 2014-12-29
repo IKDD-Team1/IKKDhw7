@@ -42,6 +42,25 @@ public class InfluenceMax
 		network_.add( lastNode );
 	}
 
+	/* Print all the neighbors of the specified node to the console.
+	 */
+	public void printNeighbors( int[] nodeIDs )
+	{
+		System.out.println( "There are " + network_.size() + " nodes in the network." );
+		for ( int nodeID : nodeIDs )
+		{
+			if ( nodeID > network_.size() )
+			{
+				System.out.println( "Out of range! Ignore node " + nodeID + "." );
+				continue;
+			}
+
+			System.out.println( "The neighbors of node " + nodeID + " :" );
+			System.out.println( network_.get( nodeID ).neighbors.toString() );
+		}
+
+	}
+
 }	// end of class InfluenceMax
 
 class Node
