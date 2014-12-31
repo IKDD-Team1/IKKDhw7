@@ -2,10 +2,14 @@ public class IKKDhw7
 {
 	public static void main( String[] args )
 	{
+		// Input: java IKKDhw7 <network_file> <# of seed to find>
+		// <iterations to do> <probability>
 		String filePath = args[0];
-		float probabilty = Float.parseFloat( args[1] );
+		int numOfSeed = Integer.parseInt( args[1] );
+		int iterations = Integer.parseInt( args[2] );
+		float probabilty = Float.parseFloat( args[3] );
 		InfluenceMax influenceMax = new InfluenceMax();
-		int[] checkNodes = { 0, 12, 190 };
+		int[] checkNodes = { 0, 1, 2, 3 };
 		long excutionTime = 0;
 
 		try
@@ -16,11 +20,11 @@ public class IKKDhw7
 			influenceMax.buildNetwork( filePath );
 			System.out.println( "Done" );
 
-			influenceMax.DFSGreedyIC( 10, probabilty, 1000 );
+			influenceMax.DFSGreedyIC( numOfSeed, probabilty, iterations );
 
 			excutionTime += System.currentTimeMillis();
 
-			System.out.println( "Excution time: " + ((float)excutionTime/1000.0f) + "seconds" );
+			System.out.println( "Excution time: " + ((float)excutionTime/1000.0f) + " seconds" );
 		}
 		catch ( Exception e )
 		{
