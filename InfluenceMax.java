@@ -7,6 +7,7 @@ import java.util.Vector;
 public class InfluenceMax
 {
 	private Vector< Node > network_ = new Vector< Node >();
+	private Vector< Integer > numOfElement_ = null;
 
 	/* Build the network of each node from the input file.
 	 */
@@ -80,7 +81,7 @@ public class InfluenceMax
 			for ( int i = 0; i < allFofS.length; ++i )
 				allFofS[i] = 0;
 
-			System.out.println( "Finding " + ( seedIndex+1 ) + "th seed..." );
+			System.out.print( "Finding " + ( seedIndex+1 ) + "th seed...  " );
 
 			// Evaluation total influence f(S) by Monte Carlo simulation
 			for ( int i = 0; i < iterations; ++i )
@@ -88,15 +89,17 @@ public class InfluenceMax
 				// Pre-decide propagation probability
 				trimmed_network = preDecideProbability( probability );
 				// Check if the node in the graph is accessiable from the seed set
-				boolean[] accessiableFromSeed =
-					getAccessibleGraph( trimmed_network, IDofSeeds, seedIndex );
+				// , and index them
+				int[] componentID =
+					getComponentID( trimmed_network, IDofSeeds, seedIndex );
 
 				for ( int candidateID = 0; candidateID < network_.size(); ++candidateID )
 				{
 					if ( selected[ candidateID ] ) continue;
 
-					if ( !accessiableFromSeed[ candidateID ] )
-						allFofS[ candidateID ] += ICModel( trimmed_network, candidateID );
+					if ( componentID[ candidateID ] != 0 )
+						allFofS[ candidateID ] +=
+						numOfElement_.get( componentID[ candidateID ] ).intValue();
 				}
 			}
 
@@ -111,7 +114,7 @@ public class InfluenceMax
 					theMaxCandidateID = i;
 				}
 
-			System.out.println( "The " + ( seedIndex+1 ) + "th seed node is ID: " + theMaxCandidateID );
+			System.out.println( "ID: " + theMaxCandidateID );
 			selected[ theMaxCandidateID ] = true;
 
 			resultFofS += theMaxFofS / iterations;
@@ -119,6 +122,23 @@ public class InfluenceMax
 
 		System.out.println( "Total influence f(S) : " + resultFofS );
 
+	}
+
+	public void testFunction( float probability )
+	{
+		Vector< Node > trimmed_network = preDecideProbability( probability );
+
+		for ( int i = 0; i < trimmed_network.size(); ++i )
+		{
+			System.out.println( i + " : " + trimmed_network.get(i).neighbors.toString() );
+		}
+		int[] selected = {};
+		int[] componentID = getComponentID( trimmed_network, selected, selected.length );
+
+		for ( int i = 0; i < componentID.length; ++i )
+			System.out.println( i + " : " + componentID[i] );
+
+		System.out.println( "Number of elements : " + numOfElement_.toString() );
 	}
 
 	/* Pre-decide the propagation probability of each eage.
@@ -165,23 +185,33 @@ public class InfluenceMax
 		return trimmed_network;
 	}
 
-	/* Get the nodes that are accssible from the specified nodes in the graph.
+	/* Get the components in the graph. The nodes having the same ID are in the same component.
+	 * And the component ID of the node accessible from the seed is 0.
+	 * Count the number of the emelent in each component.
 	 */
-	private boolean[] getAccessibleGraph( Vector< Node > network, int[] selectedSeeds, int seedIDNow )
+	private int[] getComponentID( Vector< Node > network, int[] selectedSeeds, int seedIDNow )
 	{
-		boolean[] active = new boolean[ network.size() ];
+		int[] componentID = new int[ network.size() ];
+		int componentIDNow = 0;
+		int elementCounter = 0;
 		Stack< Integer > newActiveNode = new Stack< Integer >();
 
-		if ( seedIDNow == 0 )
-			return active;
+		// Initialze the counter of the number of the node in the component
+		numOfElement_ = new Vector< Integer >();
+
+		// Initialze the component ID of each node to be -1,
+		// which means the node hasn't been checked.
+		for ( int i = 0; i < componentID.length; ++i )
+			componentID[i] = -1;
 
 		for ( int i = 0; i < seedIDNow; ++i )
 		{
-			active[ selectedSeeds[i] ] = true;
+			componentID[ selectedSeeds[i] ] = 0;
+			++elementCounter;
 			newActiveNode.push( selectedSeeds[i] );
 		}
 
-		// DFS
+		// DFS: Find the nodes which are accessible from the seed.
 		while ( !newActiveNode.empty() )
 		{
 			Node node = network.get( newActiveNode.pop() );
@@ -191,51 +221,52 @@ public class InfluenceMax
 			{
 				targetNeighborID = node.neighbors.get( j );
 
-				if ( !active[ targetNeighborID ] )
+				if ( componentID[ targetNeighborID ] == -1 )
 				{
-					active[ targetNeighborID ] = true;
+					componentID[ targetNeighborID ] = 0;
+					++elementCounter;
 					newActiveNode.push( targetNeighborID );
 				}
 			}
 		}
 
-		return active;
-	}
+		numOfElement_.add( elementCounter );
 
-	/* Get the F(S), S = { candidate node }, using pre-decidec IC Model.
-	 */
-	private int ICModel( Vector< Node > network, int candidateID )
-	{
-		boolean[] active = new boolean[ network.size() ];
-		Stack< Integer > newActiveNode = new Stack< Integer >();
-		int numOfActiveNodes = 0;
-
-		// Active the candidate seed and push to the stack
-		active[ candidateID ] = true;
-		newActiveNode.push( candidateID );
-		++numOfActiveNodes;
-
-		// IC Model
-		while ( !newActiveNode.empty() )
+		// Find the other components
+		for ( int i = 0; i < network.size(); ++i )
 		{
-			Node node = network.get( newActiveNode.pop() );
-			Integer targetNeighborID;
-
-			for ( int j = 0; j < node.neighbors.size(); ++j )
+			if ( componentID[i] == -1 )
 			{
-				targetNeighborID = node.neighbors.get( j );
+				elementCounter = 0;
+				++componentIDNow;
 
-				if ( !active[ targetNeighborID ] )
+				componentID[i] = componentIDNow;
+				++elementCounter;
+				newActiveNode.push( i );
+
+				while( !newActiveNode.empty() )
 				{
-					active[ targetNeighborID ] = true;
-					newActiveNode.push( targetNeighborID );
-					++numOfActiveNodes;
+					Vector< Integer > neighbors = network.get( newActiveNode.pop() ).neighbors;
+					Integer targetNeighborID;
+
+					for ( int j = 0; j < neighbors.size(); ++j )
+					{
+						targetNeighborID = neighbors.get(j);
+
+						if ( componentID[ targetNeighborID ] == -1 )
+						{
+							componentID[ targetNeighborID ] = componentIDNow;
+							++elementCounter;
+							newActiveNode.push( targetNeighborID );
+						}
+					}
 				}
+
+				numOfElement_.add( elementCounter );
 			}
 		}
 
-		return numOfActiveNodes;
-
+		return componentID;
 	}
 
 }	// end of class InfluenceMax
