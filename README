@@ -1,0 +1,20 @@
+Run:
+	java IKKDhw7 <network file> <# of seed> <iterations> <probability>
+
+Example:
+	java IKKDhw7 Brightkite_edges.txt 10 1000 0.1
+
+Output:
+	Building network...  Done
+	Finding 1th seed...  ID: 0
+	Finding 2th seed...  ID: 58160
+	Finding 3th seed...  ID: 58151
+	Finding 4th seed...  ID: 58159
+	Finding 5th seed...  ID: 58152
+	Finding 6th seed...  ID: 58153
+	Finding 7th seed...  ID: 58161
+	Finding 8th seed...  ID: 57969
+	Finding 9th seed...  ID: 58206
+	Finding 10th seed...  ID: 58204
+	Total influence f(S) : 42612
+	Excution time: 705.674 seconds
