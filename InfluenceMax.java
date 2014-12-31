@@ -131,21 +131,35 @@ public class InfluenceMax
 		int randomThreshold = (int)( probability * 100.0f );
 		Vector< Node > trimmed_network = new Vector< Node >();
 
+		// Initialize the trimmed_network
+		for ( int i = 0; i < network_.size(); ++i )
+			trimmed_network.add( new Node() );
+
 		for ( int sourceNodeID = 0; sourceNodeID < network_.size(); ++sourceNodeID )
 		{
 			int numOfNeighbors = network_.get( sourceNodeID ).neighbors.size();
 			Vector< Integer > neighbors = network_.get( sourceNodeID ).neighbors;
-			Vector< Integer > trimmed_neighbors = new Vector< Integer >();
+			Vector< Integer > trimmed_neighbors = trimmed_network.get( sourceNodeID ).neighbors;
+			int neighborID = 0;
 
 			for ( int i = 0; i < numOfNeighbors; ++i )
 			{
-				if ( random.nextInt( 100 ) < randomThreshold )
-					trimmed_neighbors.add( neighbors.get(i) );
+				neighborID = neighbors.get(i).intValue();
+
+				if ( neighborID > sourceNodeID &&
+					( random.nextInt() % 100 ) < randomThreshold )
+				{
+					trimmed_neighbors.add( neighborID );
+
+					Node neighborNode = trimmed_network.get( neighborID );
+					neighborNode.neighbors.add( sourceNodeID );
+					trimmed_network.set( neighborID, neighborNode );
+				}
 			}
 
-			Node trimmed_node = new Node();
-			trimmed_node.neighbors = trimmed_neighbors;
-			trimmed_network.add( trimmed_node );
+			Node node = new Node();
+			node.neighbors = trimmed_neighbors;
+			trimmed_network.set( sourceNodeID, node );
 		}
 
 		return trimmed_network;
@@ -229,5 +243,10 @@ public class InfluenceMax
 class Node
 {
 	public Vector< Integer > neighbors;
+
+	public Node()
+	{
+		neighbors = new Vector< Integer >();
+	}
 
 }	// end of class Node
