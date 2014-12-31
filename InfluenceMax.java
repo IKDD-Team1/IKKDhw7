@@ -72,6 +72,7 @@ public class InfluenceMax
 		int[] IDofSeeds = new int[ numOfSeeds ];
 		int[] allFofS = new int[ network_.size() ];
 		int resultFofS = 0;
+		Vector< Node > trimmed_network = null;
 
 		for ( int seedIndex = 0; seedIndex < numOfSeeds; ++seedIndex )
 		{
@@ -84,25 +85,18 @@ public class InfluenceMax
 			// Evaluation total influence f(S) by Monte Carlo simulation
 			for ( int i = 0; i < iterations; ++i )
 			{
-				if ( i % 100 == 0 )
-				{
-					System.out.println( i + "\titerations completed" );
-				}
-
 				// Pre-decide propagation probability
-				preDecideProbability( probability );
+				trimmed_network = preDecideProbability( probability );
 				// Check if the node in the graph is accessiable from the seed set
-				boolean[] accessiableFromSeed = getAccessibleGraph( IDofSeeds, seedIndex );
+				boolean[] accessiableFromSeed =
+					getAccessibleGraph( trimmed_network, IDofSeeds, seedIndex );
 
 				for ( int candidateID = 0; candidateID < network_.size(); ++candidateID )
 				{
-//					if ( candidateID % 100 == 0 )
-//						System.out.println( candidateID + " nodes tested." );
-
 					if ( selected[ candidateID ] ) continue;
 
 					if ( !accessiableFromSeed[ candidateID ] )
-						allFofS[ candidateID ] += ICModel( candidateID );
+						allFofS[ candidateID ] += ICModel( trimmed_network, candidateID );
 				}
 			}
 
@@ -128,37 +122,40 @@ public class InfluenceMax
 	}
 
 	/* Pre-decide the propagation probability of each eage.
+	 * And return the trimmed network, which the neighbor not accessiable
+	 * from the source node is removed.
 	 */
-	private void preDecideProbability( float probability )
+	private Vector< Node > preDecideProbability( float probability )
 	{
 		Random random = new Random( System.currentTimeMillis() );
 		int randomThreshold = (int)( probability * 100.0f );
+		Vector< Node > trimmed_network = new Vector< Node >();
 
 		for ( int sourceNodeID = 0; sourceNodeID < network_.size(); ++sourceNodeID )
 		{
-			Vector< Boolean > accessible = new Vector< Boolean >();
 			int numOfNeighbors = network_.get( sourceNodeID ).neighbors.size();
+			Vector< Integer > neighbors = network_.get( sourceNodeID ).neighbors;
+			Vector< Integer > trimmed_neighbors = new Vector< Integer >();
 
 			for ( int i = 0; i < numOfNeighbors; ++i )
 			{
 				if ( random.nextInt( 100 ) < randomThreshold )
-					accessible.add( true );
-				else
-					accessible.add( false );
+					trimmed_neighbors.add( neighbors.get(i) );
 			}
 
-			Node node = new Node();
-			node.neighbors = network_.get( sourceNodeID ).neighbors;
-			node.accessible = accessible;
-			network_.set( sourceNodeID, node );
+			Node trimmed_node = new Node();
+			trimmed_node.neighbors = trimmed_neighbors;
+			trimmed_network.add( trimmed_node );
 		}
+
+		return trimmed_network;
 	}
 
 	/* Get the nodes that are accssible from the specified nodes in the graph.
 	 */
-	private boolean[] getAccessibleGraph( int[] selectedSeeds, int seedIDNow )
+	private boolean[] getAccessibleGraph( Vector< Node > network, int[] selectedSeeds, int seedIDNow )
 	{
-		boolean[] active = new boolean[ network_.size() ];
+		boolean[] active = new boolean[ network.size() ];
 		Stack< Integer > newActiveNode = new Stack< Integer >();
 
 		if ( seedIDNow == 0 )
@@ -173,15 +170,14 @@ public class InfluenceMax
 		// DFS
 		while ( !newActiveNode.empty() )
 		{
-			Node node = network_.get( newActiveNode.pop() );
+			Node node = network.get( newActiveNode.pop() );
 			Integer targetNeighborID;
 
 			for ( int j = 0; j < node.neighbors.size(); ++j )
 			{
 				targetNeighborID = node.neighbors.get( j );
 
-				if ( node.accessible.get(j).booleanValue() &&
-					!active[ targetNeighborID ] )
+				if ( !active[ targetNeighborID ] )
 				{
 					active[ targetNeighborID ] = true;
 					newActiveNode.push( targetNeighborID );
@@ -194,9 +190,9 @@ public class InfluenceMax
 
 	/* Get the F(S), S = { candidate node }, using pre-decidec IC Model.
 	 */
-	private int ICModel( int candidateID )
+	private int ICModel( Vector< Node > network, int candidateID )
 	{
-		boolean[] active = new boolean[ network_.size() ];
+		boolean[] active = new boolean[ network.size() ];
 		Stack< Integer > newActiveNode = new Stack< Integer >();
 		int numOfActiveNodes = 0;
 
@@ -208,15 +204,14 @@ public class InfluenceMax
 		// IC Model
 		while ( !newActiveNode.empty() )
 		{
-			Node node = network_.get( newActiveNode.pop() );
+			Node node = network.get( newActiveNode.pop() );
 			Integer targetNeighborID;
 
 			for ( int j = 0; j < node.neighbors.size(); ++j )
 			{
 				targetNeighborID = node.neighbors.get( j );
 
-				if ( node.accessible.get(j).booleanValue() &&
-					!active[ targetNeighborID ] )
+				if ( !active[ targetNeighborID ] )
 				{
 					active[ targetNeighborID ] = true;
 					newActiveNode.push( targetNeighborID );
@@ -234,6 +229,5 @@ public class InfluenceMax
 class Node
 {
 	public Vector< Integer > neighbors;
-	public Vector< Boolean > accessible;	// Is this neighbor accessible?
 
 }	// end of class Node
